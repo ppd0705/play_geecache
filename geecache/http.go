@@ -2,20 +2,50 @@ package geecache
 
 import (
 	"fmt"
+	"geecache/consistenthash"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
+	"sync"
 )
 
-const defaultBasePath = "/_geecache/"
-
+const (
+	defaultBasePath = "/_geecache/"
+	defaultReplicas = 50
+)
 
 type HTTPPoll struct {
-	self string
-	bashPath string
+	self        string
+	bashPath    string
+	mu          sync.Mutex
+	peers       *consistenthash.Map
+	httpGetters map[string]*httpGetter
 }
 
-func NewHTTPPoll(self string) *HTTPPoll{
+type httpGetter struct {
+	baseUrl string
+}
+
+func (h *httpGetter) Get(group string, key string) ([]byte, error) {
+	u := fmt.Sprintf("%v%v/%v", h.baseUrl, url.QueryEscape(group), url.QueryEscape(key))
+	res, err := http.Get(u)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("server return: %v", res.Status)
+	}
+	bytes, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading response body: %v", err)
+	}
+	return bytes, nil
+}
+
+func NewHTTPPoll(self string) *HTTPPoll {
 	return &HTTPPoll{
 		self:     self,
 		bashPath: defaultBasePath,
@@ -41,7 +71,7 @@ func (p *HTTPPoll) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	key := parts[1]
 	group := GetGroup(groupName)
 	if group == nil {
-		http.Error(w, "no such group: " + groupName, http.StatusNotFound)
+		http.Error(w, "no such group: "+groupName, http.StatusNotFound)
 		return
 	}
 	view, err := group.Get(key)
@@ -54,3 +84,25 @@ func (p *HTTPPoll) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write(view.ByteSlice())
 }
 
+func (p *HTTPPoll) Set(peers ...string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.peers = consistenthash.New(defaultReplicas, nil)
+	p.peers.Add(peers...)
+	p.httpGetters = make(map[string]*httpGetter, len(peers))
+	for _, peer := range peers {
+		p.httpGetters[peer] = &httpGetter{baseUrl: peer + p.bashPath}
+	}
+}
+
+func (p *HTTPPoll) PickPeer(key string) (PeerGetter, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if peer := p.peers.Get(key); peer != "" && peer != p.self {
+		p.Log("Pick peer %s", peer)
+		return p.httpGetters[peer], true
+	}
+	return nil, false
+}
+
+var _ PeerGetter = (*httpGetter)(nil)
