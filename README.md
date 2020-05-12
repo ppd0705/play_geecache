@@ -15,6 +15,8 @@ a simple distributed cache library
 - 实现HTTPServer
 
 ### day4
+- 实现一致性哈希
+
 ### day5
 ### day6
 ### day7
