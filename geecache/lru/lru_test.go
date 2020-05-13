@@ -11,7 +11,6 @@ func (d String) Len() int {
 	return len(d)
 }
 
-
 func TestGet(t *testing.T) {
 	lru := New(0, nil)
 

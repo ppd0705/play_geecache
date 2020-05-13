@@ -13,8 +13,9 @@ var db = map[string]string{
 	"Jack": "634",
 	"Sam":  "530",
 }
+
 func createGroup() *geecache.Group {
-	return 	geecache.NewGroup("scores", 2<<10, geecache.GetterFunc(
+	return geecache.NewGroup("scores", 2<<10, geecache.GetterFunc(
 		func(key string) ([]byte, error) {
 			log.Println("[SlowDB] search key", key)
 			if v, ok := db[key]; ok {
@@ -70,6 +71,5 @@ func main() {
 		go startAPIServer(apiAddr, gee)
 	}
 	startCacheServer(addrMap[port], addrs, gee)
-
 
 }

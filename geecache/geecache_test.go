@@ -8,17 +8,16 @@ import (
 )
 
 func TestGetter(t *testing.T) {
-	var f Getter = GetterFunc(func (key string) ([]byte, error) {
-			return []byte(key), nil
+	var f Getter = GetterFunc(func(key string) ([]byte, error) {
+		return []byte(key), nil
 	})
 
 	expect := []byte("abc")
 
-	if v, _ := f.Get("abc");!reflect.DeepEqual(v, expect) {
+	if v, _ := f.Get("abc"); !reflect.DeepEqual(v, expect) {
 		t.Error("callback failed")
 	}
 }
-
 
 func TestGet(t *testing.T) {
 	var db = map[string]string{
@@ -28,7 +27,7 @@ func TestGet(t *testing.T) {
 	}
 	loadCounts := make(map[string]int, len(db))
 
-	gee := NewGroup("scores", 2 <<10, GetterFunc(
+	gee := NewGroup("scores", 2<<10, GetterFunc(
 		func(key string) ([]byte, error) {
 			log.Println("[SlowDB] search key", key)
 			if v, ok := db[key]; ok {
@@ -40,7 +39,6 @@ func TestGet(t *testing.T) {
 			}
 			return nil, fmt.Errorf("%s not exist", key)
 		}))
-
 
 	for k, v := range db {
 		if view, err := gee.Get(k); err != nil || view.String() != v {

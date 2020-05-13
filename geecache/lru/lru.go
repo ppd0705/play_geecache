@@ -9,19 +9,18 @@ type Value interface {
 }
 
 type entry struct {
-	key string
+	key   string
 	value Value
 }
 
 type Cache struct {
 	maxBytes int64
-	nbytes int64
-	ll *list.List
-	cache map[string]*list.Element
+	nbytes   int64
+	ll       *list.List
+	cache    map[string]*list.Element
 
 	OnEvicted func(key string, value Value)
 }
-
 
 func New(maxBytes int64, onEvicted func(string, Value)) *Cache {
 	return &Cache{
@@ -37,7 +36,7 @@ func (c *Cache) Get(key string) (value Value, ok bool) {
 	if ele, ok := c.cache[key]; ok {
 		c.ll.MoveToFront(ele)
 		kv := ele.Value.(*entry)
-		return kv.value,true
+		return kv.value, true
 	}
 	return nil, false
 }
