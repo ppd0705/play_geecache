@@ -2,6 +2,7 @@ package geecache
 
 import (
 	"fmt"
+	pb "geecache/geecachepb"
 	"geecache/singleflight"
 	"log"
 	"sync"
@@ -22,7 +23,7 @@ type Group struct {
 	getter    Getter
 	mainCache cache
 	peers     PeerPicker
-	loader *singleflight.Group
+	loader    *singleflight.Group
 }
 
 var (
@@ -41,7 +42,7 @@ func NewGroup(name string, cacheBytes int64, getter Getter) *Group {
 		name:      name,
 		getter:    getter, // 缓存未命中时获取源数据的回调(callback)
 		mainCache: cache{cacheBytes: cacheBytes},
-		loader: &singleflight.Group{},
+		loader:    &singleflight.Group{},
 	}
 	groups[name] = g
 	return g
@@ -85,11 +86,16 @@ func (g *Group) load(key string) (value ByteView, err error) {
 }
 
 func (g *Group) getFromPeer(peer PeerGetter, key string) (ByteView, error) {
-	bytes, err := peer.Get(g.name, key)
-	if err != nil {
-		return ByteView{}, nil
+	req := &pb.Request{
+		Group: g.name,
+		Key:   key,
 	}
-	return ByteView{b: bytes}, nil
+	res := &pb.Response{}
+	err := peer.Get(req, res)
+	if err != nil {
+		return ByteView{}, err
+	}
+	return ByteView{b: res.Value}, nil
 }
 
 func (g *Group) getLocally(key string) (ByteView, error) {
