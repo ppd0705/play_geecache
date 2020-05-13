@@ -21,4 +21,5 @@ a simple distributed cache library
 - 实现分布式节点
 
 ### day6
+- 实现single flight: duplicate function call suppression
 ### day7
