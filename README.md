@@ -22,4 +22,6 @@ a simple distributed cache library
 
 ### day6
 - 实现single flight: duplicate function call suppression
+
 ### day7
+- 使用protobuf序列化
